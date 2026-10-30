@@ -14,6 +14,13 @@ import Foundation
         }
         let keys = try decode(clipboard)
         precondition(keys.ordered.count == 2 && keys.ordered[0].keyId == 1 && keys.ordered[1].keyId == 2)
+        let fingerprint = try keys.fingerprint()
+        let reversedJSON = """
+        {"keys":{"secondaryKey":{"keyId":2,"key":"\(second)"},"primaryKey":{"keyId":1,"key":"\(first)"}}}
+        """
+        let reorderedFingerprint = try decode(reversedJSON).fingerprint()
+        let changedFingerprint = try decode(clipboard.replacingOccurrences(of: second, with: Data(repeating: 3, count: 16).base64EncodedString())).fingerprint()
+        precondition(fingerprint.count == 12 && fingerprint == reorderedFingerprint && fingerprint != changedFingerprint)
         let invalid = [
             "not JSON",
             "{\"keys\":{}}",
@@ -28,6 +35,6 @@ import Foundation
                 fatalError("Accepted invalid device keys")
             } catch {}
         }
-        print("PASS: pasted key JSON, missing keys, Base64, key length, duplicate IDs and UInt32 bounds")
+        print("PASS: pasted key JSON, validation and stable, key-sensitive diagnostic fingerprints")
     }
 }
