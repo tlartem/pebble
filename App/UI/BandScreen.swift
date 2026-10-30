@@ -73,6 +73,8 @@ struct BandScreen: View {
                     NavigationLink { KeyView() } label: {
                         LabeledContent("Device key", value: band.keysReady ? "In Keychain" : "Needed")
                     }
+                    ShareLink("Share connection report", item: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("connection-report.json"))
+                        .disabled(band.active || library.preview)
                 } header: { Text("About the band") } footer: {
                     Text("The light shows battery: white above 20%, red below. Its colour is set by the band’s firmware and can’t be changed by apps.")
                 }
