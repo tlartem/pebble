@@ -408,6 +408,10 @@ struct KeyView: View {
             Section {
                 LabeledContent("Status", value: band.keysReady ? "Stored on this iPhone" : "Not imported")
                 Button("Import key file") { importing = true }.disabled(library.preview || band.active)
+                PasteButton(payloadType: String.self) { values in
+                    if let text = values.first { importKeys(Data(text.utf8)) }
+                }
+                .disabled(library.preview || band.active)
                 if let message { Text(message).font(.footnote).foregroundStyle(Tone.ink2) }
             } footer: { Text("Your Air’s two device keys secure the Bluetooth session. They live in this iPhone’s Keychain, never leave the device, and aren’t in any backup.") }
         }
@@ -417,14 +421,23 @@ struct KeyView: View {
             do {
                 let url = try result.get()
                 let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }
-                let data = try Data(contentsOf: url)
-                guard data.count <= 16384 else { throw DeviceKeys.Failure.invalid }
-                let keys = try JSONDecoder().decode(DeviceKeys.self, from: data); try keys.validate()
-                let destination = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("device-keys.json")
-                try data.write(to: destination, options: [.atomic, .completeFileProtection])
-                _ = try DeviceKeys.load(); band.refreshKeys()
-                message = "Keys stored. You can delete the file you imported."
-            } catch { message = "That file doesn’t contain two valid Air device keys." }
+                importKeys(try Data(contentsOf: url))
+            } catch { message = "Couldn’t read the file. Try the Paste button." }
+        }
+    }
+
+    private func importKeys(_ data: Data) {
+        do {
+            guard data.count <= 16384 else { throw DeviceKeys.Failure.invalid }
+            let keys = try JSONDecoder().decode(DeviceKeys.self, from: data); try keys.validate()
+            let destination = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("device-keys.json")
+            try data.write(to: destination, options: [.atomic, .completeFileProtection])
+            _ = try DeviceKeys.load(); band.refreshKeys()
+            message = "Keys stored. You can delete the file you imported."
+        } catch DeviceKeys.Failure.keychain {
+            message = "Couldn’t save keys in Keychain. Check the app’s signing profile."
+        } catch {
+            message = "That text or file doesn’t contain two valid Air device keys."
         }
     }
 }
