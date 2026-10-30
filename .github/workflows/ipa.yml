@@ -1,0 +1,39 @@
+name: Build unsigned IPA
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare native dependencies
+        run: ./scripts/prepare-native.sh
+      - name: Build for iPhone without signing
+        run: |
+          cmake -S App -B .private/ios-project -G Xcode \
+            -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_DEPLOYMENT_TARGET=18.0 \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+          xcodebuild -project .private/ios-project/Pebble.xcodeproj \
+            -scheme Pebble -configuration Debug -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO build
+      - name: Package IPA
+        run: |
+          test -f .private/ios-project/Debug-iphoneos/Pebble.app/Pebble
+          mkdir -p .private/ipa/Payload
+          ditto .private/ios-project/Debug-iphoneos/Pebble.app .private/ipa/Payload/Pebble.app
+          ditto -c -k --keepParent .private/ipa/Payload Pebble-unsigned.ipa
+          unzip -tq Pebble-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Pebble-unsigned
+          path: Pebble-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 3
