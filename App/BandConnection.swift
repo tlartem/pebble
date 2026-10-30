@@ -100,6 +100,8 @@ final class BandConnection: NSObject, ObservableObject, CBCentralManagerDelegate
     private let legacy = CBUUID(string: "ABBAFF00-E56A-484C-B832-8B17CF6CBFE8")
     private let txID = CBUUID(string: "ABBAFF01-E56A-484C-B832-8B17CF6CBFE8")
     private let rxID = CBUUID(string: "ABBAFF02-E56A-484C-B832-8B17CF6CBFE8")
+    private let linkStatusService = CBUUID(string: "ABBAFD00-E56A-484C-B832-8B17CF6CBFE8")
+    private let linkStatusID = CBUUID(string: "ABBAFD02-E56A-484C-B832-8B17CF6CBFE8")
     override init() {
         super.init(); refreshKeys()
         if let data = try? Data(contentsOf: document("band-snapshot.json")),
@@ -296,7 +298,7 @@ final class BandConnection: NSObject, ObservableObject, CBCentralManagerDelegate
             record("ancs_probe_no_application_writes")
             return
         }
-        peripheral.discoverServices([service, legacy])
+        peripheral.discoverServices([service, legacy, linkStatusService])
     }
     func centralManager(_ central: CBCentralManager, didUpdateANCSAuthorizationFor peripheral: CBPeripheral) {
         guard active, band === peripheral else { return }
@@ -318,18 +320,29 @@ final class BandConnection: NSObject, ObservableObject, CBCentralManagerDelegate
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         guard active, band === peripheral else { return }
         guard error == nil, let services = peripheral.services, !services.isEmpty else { finish("Band service unavailable", "No settings were changed."); return }
-        for service in services { peripheral.discoverCharacteristics([txID, rxID], for: service) }
+        for service in services {
+            peripheral.discoverCharacteristics(service.uuid == linkStatusService ? [linkStatusID] : [txID, rxID], for: service)
+        }
     }
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         guard active, band === peripheral else { return }
+        if service.uuid == linkStatusService {
+            guard error == nil, let status = service.characteristics?.first(where: { $0.uuid == linkStatusID }), status.properties.contains(.read) else {
+                record("ble_link_status_unavailable"); return
+            }
+            peripheral.readValue(for: status)
+            return
+        }
+        guard !hasStarted else { record("ignored_service_callback", value: service.uuid.uuidString); return }
         guard error == nil else { finish("Band service unavailable", "No settings were changed."); return }
         for characteristic in service.characteristics ?? [] {
             if characteristic.uuid == txID { tx = characteristic }
             if characteristic.uuid == rxID { rx = characteristic }
         }
-        guard !hasStarted, let tx, let rx else { return }
+        guard let tx, let rx else { return }
         guard tx.properties.contains(.writeWithoutResponse), rx.properties.contains(.notify) else { finish("Unsupported band transport", "No settings were changed."); return }
         hasStarted = true
+        record("subscribed_service", value: service.uuid.uuidString)
         peripheral.setNotifyValue(true, for: rx)
     }
     func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
@@ -386,6 +399,13 @@ final class BandConnection: NSObject, ObservableObject, CBCentralManagerDelegate
         } catch { finish("Device key unavailable", "Unlock your iPhone and try again.") }
     }
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+        if active, band === peripheral, characteristic.uuid == linkStatusID {
+            guard error == nil, let data = characteristic.value, data.count >= 7, let flags = data.first else {
+                record("ble_link_status_read_failed", value: (error as NSError?).map { "\($0.domain):\($0.code)" } ?? "invalid_length"); return
+            }
+            record("ble_link_status", value: "bonded=\(flags & 1 != 0),encrypted=\(flags & 2 != 0),halfBonded=\(flags & 16 != 0)")
+            return
+        }
         guard active, band === peripheral, characteristic === rx, let transport, let data = characteristic.value else { return }
         guard error == nil else { finish("Receive failed", "No settings were changed."); return }
         capture("receive", data)
