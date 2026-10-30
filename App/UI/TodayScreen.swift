@@ -26,7 +26,7 @@ struct TodayScreen: View {
                 .padding(.horizontal, 16).padding(.bottom, 28)
             }
             .screenBackground()
-            .navigationTitle("Today")
+            .navigationTitle(L("Today"))
             .refreshable { if band.canStart { _ = await band.run { band.start() } } }
             .sheet(isPresented: $editingGoal) { GoalSheet() }
             .sheet(isPresented: $logging) { LogWorkoutSheet() }
@@ -55,7 +55,7 @@ struct StatusChip: View {
             HStack(spacing: 6) {
                 if band.active { ProgressView().controlSize(.mini) }
                 else { Circle().fill(dot).frame(width: 7, height: 7) }
-                Text(label).font(.caption.weight(.semibold)).foregroundStyle(Tone.ink).lineLimit(1)
+                Text(L(label)).font(.caption.weight(.semibold)).foregroundStyle(Tone.ink).lineLimit(1)
             }
             .padding(.horizontal, 11).frame(height: 28)
             .background(Tone.surface, in: Capsule())
@@ -63,16 +63,16 @@ struct StatusChip: View {
         .buttonStyle(PressStyle())
         .disabled(!band.canStart)
         .animation(.easeOut(duration: 0.2), value: band.active)
-        .accessibilityLabel("Band status: \(label)")
-        .accessibilityHint(band.canStart ? "Refreshes from your band" : "")
+        .accessibilityLabel(L("Band status: %@", String(describing: label)))
+        .accessibilityHint(band.canStart ? L("Refreshes from your band") : "")
     }
     private var label: String {
-        if library.preview { return "Example data" }
+        if library.preview { return L("Example data") }
         if band.active { return band.status }
-        if !band.keysReady { return "Key needed" }
+        if !band.keysReady { return L("Key needed") }
         if band.lastSucceeded == false { return band.status }
-        if let read = band.lastRead { return "Synced " + Format.relative(read) }
-        return "Not synced"
+        if let read = band.lastRead { return L("Synced ") + Format.relative(read) }
+        return L("Not synced")
     }
     private var dot: Color {
         if library.preview { return Tone.moss }
@@ -94,10 +94,10 @@ private struct StepsCard: View {
         let settings = library.data.alerts
         Card {
             HStack {
-                Eyebrow("Steps")
+                Eyebrow(L("Steps"))
                 Spacer()
                 Button { editingGoal = true } label: {
-                    Text("Goal \(goal.formatted())").font(.caption.weight(.semibold)).foregroundStyle(Tone.moss)
+                    Text(L("Goal %@", String(describing: goal.formatted()))).font(.caption.weight(.semibold)).foregroundStyle(Tone.moss)
                 }.buttonStyle(PressStyle())
             }
             Text(steps.map { $0.formatted() } ?? "—")
@@ -109,7 +109,7 @@ private struct StepsCard: View {
                            ticks: settings.milestone.enabled ? stride(from: settings.milestoneStep, to: goal, by: max(settings.milestoneStep, 500)).map { Double($0) / Double(goal) } : [])
                 .padding(.top, 10)
             HStack {
-                Text(caption(goal)).font(.footnote).foregroundStyle(Tone.ink2)
+                Text(L(caption(goal))).font(.footnote).foregroundStyle(Tone.ink2)
                 Spacer()
                 if let read = band.activity?.readAt, steps != nil { Text(Format.relative(read)).font(.footnote).foregroundStyle(Tone.ink3) }
             }
@@ -118,10 +118,10 @@ private struct StepsCard: View {
         .accessibilityElement(children: .combine)
     }
     private func caption(_ goal: Int) -> String {
-        guard let steps else { return band.keysReady ? "Pull down to read your band" : "Connect your band to see steps" }
+        guard let steps else { return band.keysReady ? L("Pull down to read your band") : L("Connect your band to see steps") }
         let left = goal - steps
-        if left <= 0 { return "Goal reached" }
-        return "\(left.formatted()) to go · about \(FitnessMath.walkingMinutes(forSteps: left)) min walking"
+        if left <= 0 { return L("Goal reached") }
+        return L("%@ to go · about %@ min walking", String(describing: left.formatted()), String(describing: FitnessMath.walkingMinutes(forSteps: left)))
     }
 }
 
@@ -131,12 +131,12 @@ private struct HeartTile: View {
         let reading = band.activity
         let pulse = reading?.reliableHeartRate == true ? reading?.heartRate : nil
         Card(padding: 16) {
-            HStack(spacing: 6) { Image(systemName: "heart.fill").font(.caption).foregroundStyle(Tone.heart); Eyebrow("Heart") }
+            HStack(spacing: 6) { Image(systemName: "heart.fill").font(.caption).foregroundStyle(Tone.heart); Eyebrow(L("Heart")) }
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(pulse.map(String.init) ?? "—").font(.figure(40)).monospacedDigit()
-                if pulse != nil { Text("bpm").font(.footnote).foregroundStyle(Tone.ink2) }
+                if pulse != nil { Text(L("bpm")).font(.footnote).foregroundStyle(Tone.ink2) }
             }.padding(.top, 8)
-            Text(pulse != nil ? Format.relative(reading!.readAt) : "No steady reading").font(.caption).foregroundStyle(Tone.ink3).padding(.top, 2)
+            Text(L(pulse != nil ? Format.relative(reading!.readAt) : L("No steady reading"))).font(.caption).foregroundStyle(Tone.ink3).padding(.top, 2)
         }
         .accessibilityElement(children: .combine)
     }
@@ -149,13 +149,13 @@ private struct BatteryTile: View {
         Card(padding: 16) {
             HStack(spacing: 6) {
                 Image(systemName: symbol(percent)).font(.caption).foregroundStyle((percent ?? 100) < 20 ? Tone.signal : Tone.ink2)
-                Eyebrow("Battery")
+                Eyebrow(L("Battery"))
             }
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text(percent.map(String.init) ?? "—").font(.figure(40)).monospacedDigit()
                 if percent != nil { Text("%").font(.footnote).foregroundStyle(Tone.ink2) }
             }.padding(.top, 8)
-            Text(band.deviceInfo.map { Format.relative($0.readAt) } ?? "Not read yet").font(.caption).foregroundStyle(Tone.ink3).padding(.top, 2)
+            Text(L(band.deviceInfo.map { Format.relative($0.readAt) } ?? L("Not read yet"))).font(.caption).foregroundStyle(Tone.ink3).padding(.top, 2)
         }
         .accessibilityElement(children: .combine)
     }
@@ -174,20 +174,20 @@ private struct SignalsCard: View {
         let hasHealth = kinds.contains { !library.points($0).isEmpty }
         Card {
             HStack {
-                Eyebrow("Body signals")
+                Eyebrow(L("Body signals"))
                 Spacer()
                 Button { methods = true } label: { Image(systemName: "info.circle").foregroundStyle(Tone.ink3) }
-                    .accessibilityLabel("How body signals work")
+                    .accessibilityLabel(L("How body signals work"))
             }
             if hasHealth {
                 VStack(spacing: 16) {
                     ForEach(kinds) { kind in SignalRow(kind: kind, points: library.points(kind)) }
                 }.padding(.top, 14)
-                Text("Last 7 days against your previous 60.").font(.caption).foregroundStyle(Tone.ink3).padding(.top, 14)
+                Text(L("Last 7 days against your previous 60.")).font(.caption).foregroundStyle(Tone.ink3).padding(.top, 14)
             } else {
-                Text("Sleep, resting heart rate and HRV from Apple Health, compared with your own usual range.")
+                Text(L("Sleep, resting heart rate and HRV from Apple Health, compared with your own usual range."))
                     .font(.subheadline).foregroundStyle(Tone.ink2).padding(.top, 10)
-                PillButton(title: "Connect Apple Health", symbol: "heart.text.square", prominent: true, busy: health.busy) {
+                PillButton(title: L("Connect Apple Health"), symbol: "heart.text.square", prominent: true, busy: health.busy) {
                     health.refresh(into: library)
                 }.padding(.top, 14).disabled(library.preview)
             }
@@ -202,19 +202,19 @@ struct SignalRow: View {
         let signal = FitnessMath.signal(kind, points)
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text(kind.short).font(.subheadline.weight(.medium))
+                Text(L(kind.short)).font(.subheadline.weight(.medium))
                 Spacer()
                 if let signal {
-                    Text(Format.value(signal.recent, kind)).font(.figure(22)).monospacedDigit()
-                    Text(kind.unit).font(.caption).foregroundStyle(Tone.ink2)
+                    Text(L(Format.value(signal.recent, kind))).font(.figure(22)).monospacedDigit()
+                    Text(L(kind.unit)).font(.caption).foregroundStyle(Tone.ink2)
                 } else {
                     let days = Set(points.map(\.date)).count
-                    Text(days == 0 ? "No data" : "Learning · \(min(days, 18))/18 days").font(.caption).foregroundStyle(Tone.ink3)
+                    Text(L(days == 0 ? L("No data") : L("Learning · %@/18 days", String(describing: min(days, 18))))).font(.caption).foregroundStyle(Tone.ink3)
                 }
             }
             if let signal {
                 RangeBar(low: signal.low, high: signal.high, value: signal.recent, outside: signal.shown(kind.decimals) != .within)
-                Text(describe(signal)).font(.caption).foregroundStyle(signal.shown(kind.decimals) == .within ? Tone.ink2 : Tone.signal)
+                Text(L(describe(signal))).font(.caption).foregroundStyle(signal.shown(kind.decimals) == .within ? Tone.ink2 : Tone.signal)
             }
         }
         .accessibilityElement(children: .combine)
@@ -222,9 +222,9 @@ struct SignalRow: View {
     private func describe(_ signal: BodySignal) -> String {
         let range = "\(Format.value(signal.low, kind))–\(Format.value(signal.high, kind)) \(kind.unit)"
         switch signal.shown(kind.decimals) {
-        case .within: return "Within your usual \(range)"
-        case .above: return "Above your usual \(range)"
-        case .below: return "Below your usual \(range)"
+        case .within: return L("Within your usual %@", String(describing: range))
+        case .above: return L("Above your usual %@", String(describing: range))
+        case .below: return L("Below your usual %@", String(describing: range))
         }
     }
 }
@@ -239,12 +239,12 @@ private struct TrainingCard: View {
         let today = states.last
         let rated = library.data.workouts.contains { $0.load != nil }
         Card {
-            Eyebrow("Training")
+            Eyebrow(L("Training"))
             if let session = library.data.session {
                 Button { sessionOpen = true } label: {
                     HStack {
                         Circle().fill(Tone.moss).frame(width: 8, height: 8)
-                        Text((session.activity ?? "Session") + (session.paused ? " · paused" : " · in progress")).font(.subheadline.weight(.medium))
+                        Text(L(session.activity ?? "Session") + (session.paused ? L(" · paused") : L(" · in progress"))).font(.subheadline.weight(.medium))
                         Spacer()
                         TimelineView(.periodic(from: .now, by: 1)) { context in
                             Text(Duration.seconds(session.elapsed(at: context.date)).formatted(.time(pattern: .hourMinuteSecond))).font(.figure(17)).monospacedDigit()
@@ -255,33 +255,33 @@ private struct TrainingCard: View {
             }
             if rated, let today {
                 HStack(alignment: .lastTextBaseline, spacing: 18) {
-                    figure("Form", today.form, signed: true)
-                    figure("Fitness", today.fitness)
-                    figure("Fatigue", today.fatigue)
+                    figure(L("Form"), today.form, signed: true)
+                    figure(L("Fitness"), today.fitness)
+                    figure(L("Fatigue"), today.fatigue)
                 }.padding(.top, 12)
                 Chart(recent) { state in
-                    LineMark(x: .value("Day", state.date), y: .value("Load", state.fitness), series: .value("Series", "Fitness"))
+                    LineMark(x: .value(L("Day"), state.date), y: .value(L("Load"), state.fitness), series: .value(L("Series"), L("Fitness")))
                         .foregroundStyle(Tone.moss).lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
-                    LineMark(x: .value("Day", state.date), y: .value("Load", state.fatigue), series: .value("Series", "Fatigue"))
+                    LineMark(x: .value(L("Day"), state.date), y: .value(L("Load"), state.fatigue), series: .value(L("Series"), L("Fatigue")))
                         .foregroundStyle(Tone.ink3).lineStyle(StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [3, 3]))
                 }
                 .chartXAxis(.hidden).chartYAxis(.hidden).frame(height: 56).padding(.top, 12)
-                .accessibilityLabel("Fitness and fatigue over six weeks")
-                Text("Weekly load \(Int(FitnessMath.weeklyLoad(library.data.workouts))) · effort × minutes").font(.caption).foregroundStyle(Tone.ink3).padding(.top, 8)
+                .accessibilityLabel(L("Fitness and fatigue over six weeks"))
+                Text(L("Weekly load %@ · effort × minutes", String(describing: Int(FitnessMath.weeklyLoad(library.data.workouts))))).font(.caption).foregroundStyle(Tone.ink3).padding(.top, 8)
             } else {
-                Text("Log sessions with how hard they felt. Pebble models fitness and fatigue from your load.")
+                Text(L("Log sessions with how hard they felt. Pebble models fitness and fatigue from your load."))
                     .font(.subheadline).foregroundStyle(Tone.ink2).padding(.top, 10)
             }
             HStack(spacing: 10) {
-                PillButton(title: library.data.session == nil ? "Start session" : "Open session", symbol: "play.fill", prominent: true) { sessionOpen = true }
-                PillButton(title: "Log", symbol: "plus") { logging = true }
+                PillButton(title: library.data.session == nil ? L("Start session") : L("Open session"), symbol: "play.fill", prominent: true) { sessionOpen = true }
+                PillButton(title: L("Log"), symbol: "plus") { logging = true }
             }.padding(.top, 14)
         }
     }
     private func figure(_ label: String, _ value: Double, signed: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(signed ? Format.signed(value) : value.formatted(.number.precision(.fractionLength(0)))).font(.figure(28)).monospacedDigit()
-            Text(label).font(.caption).foregroundStyle(Tone.ink2)
+            Text(L(label)).font(.caption).foregroundStyle(Tone.ink2)
         }
     }
 }
@@ -293,9 +293,9 @@ private struct NextAlarmCard: View {
             Card {
                 HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Eyebrow("Next alarm")
+                        Eyebrow(L("Next alarm"))
                         Text(next.0.time).font(.figure(34, .medium)).monospacedDigit()
-                        Text(next.0.schedule + (next.0.smartWake ? " · Smart wake" : "")).font(.caption).foregroundStyle(Tone.ink2)
+                        Text(L(next.0.schedule + (next.0.smartWake ? L(" · Smart wake") : ""))).font(.caption).foregroundStyle(Tone.ink2)
                     }
                     Spacer()
                     Text(next.1, style: .relative).font(.subheadline).foregroundStyle(Tone.ink2).multilineTextAlignment(.trailing)
@@ -325,8 +325,8 @@ struct KeyNeededCard: View {
             HStack(spacing: 14) {
                 PebbleMark(size: 44)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Connect your Air").font(.headline)
-                    Text("Import your device key in the Band tab.").font(.subheadline).foregroundStyle(Tone.ink2)
+                    Text(L("Connect your Air")).font(.headline)
+                    Text(L("Import your device key in the Band tab.")).font(.subheadline).foregroundStyle(Tone.ink2)
                 }
             }
         }
@@ -341,14 +341,14 @@ struct GoalSheet: View {
             VStack(spacing: 24) {
                 Text(library.data.goal.formatted()).font(.figure(64)).monospacedDigit()
                     .contentTransition(.numericText(value: Double(library.data.goal))).animation(.snappy, value: library.data.goal)
-                Stepper("Daily goal", value: Binding(get: { library.data.goal }, set: { value in library.change { $0.goal = value } }), in: 2000...40000, step: 500)
+                Stepper(L("Daily goal"), value: Binding(get: { library.data.goal }, set: { value in library.change { $0.goal = value } }), in: 2000...40000, step: 500)
                     .labelsHidden()
-                Text("Daily steps linked to lower mortality level off around 8,000–10,000 for adults under 60 and 6,000–8,000 for those 60 and over (Paluch et al., 2022).")
+                Text(L("Daily steps linked to lower mortality level off around 8,000–10,000 for adults under 60 and 6,000–8,000 for those 60 and over (Paluch et al., 2022)."))
                     .font(.footnote).foregroundStyle(Tone.ink2).multilineTextAlignment(.center)
             }
             .padding(24).frame(maxHeight: .infinity, alignment: .top)
-            .navigationTitle("Daily goal").navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .navigationTitle(L("Daily goal")).navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button(L("Done")) { dismiss() } } }
         }
         .presentationDetents([.height(340)])
     }

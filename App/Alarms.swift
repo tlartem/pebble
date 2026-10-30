@@ -11,11 +11,11 @@ struct BandAlarm: Identifiable, Codable {
     let recurring: Bool
     var time: String { String(format: "%02d:%02d", hour, minute) }
     var schedule: String {
-        guard recurring else { return "Once" }
-        if days == 127 { return "Every day" }
-        if days == 31 { return "Weekdays" }
-        if days == 96 { return "Weekends" }
-        let names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        guard recurring else { return L("Once") }
+        if days == 127 { return L("Every day") }
+        if days == 31 { return L("Weekdays") }
+        if days == 96 { return L("Weekends") }
+        let names = [L("Mon"), L("Tue"), L("Wed"), L("Thu"), L("Fri"), L("Sat"), L("Sun")]
         return names.enumerated().filter { days & (1 << $0.offset) != 0 }.map(\.element).joined(separator: ", ")
     }
     func edited(hour: Int, minute: Int, enabled: Bool, smartWake: Bool, days: UInt8? = nil) throws -> Data {

@@ -53,8 +53,8 @@ struct BandCapabilities {
         goalTypes = Set(try body.integers(3))
     }
     var hapticSummary: String {
-        guard settings.contains(1) else { return "Not advertised by your band" }
-        let labels: [UInt64: String] = [1: "Off", 2: "Low", 3: "High"]
+        guard settings.contains(1) else { return L("Not advertised by your band") }
+        let labels: [UInt64: String] = [1: L("Off"), 2: L("Low"), 3: L("High")]
         return hapticIntensities.sorted().compactMap { labels[$0] }.joined(separator: ", ")
     }
 }
@@ -93,7 +93,7 @@ struct HapticSetting: Codable {
         let updated = try Proto(configuration).replacing(1, with: Proto.integer(1, value))
         return Proto.message(1, Proto.message(1, updated))
     }
-    static func name(_ value: UInt64) -> String { [1: "Off", 2: "Low", 3: "High"][value] ?? "Unknown" }
+    static func name(_ value: UInt64) -> String { [1: L("Off"), 2: L("Low"), 3: L("High")][value] ?? L("Unknown") }
     func matches(_ other: HapticSetting) -> Bool {
         guard let first = try? Proto(configuration).fields, let second = try? Proto(other.configuration).fields else { return false }
         return first == second

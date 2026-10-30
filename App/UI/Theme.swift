@@ -1,29 +1,19 @@
 import SwiftUI
 
-extension Color {
-    init(hex: UInt32) {
-        self.init(.sRGB, red: Double((hex >> 16) & 0xFF) / 255, green: Double((hex >> 8) & 0xFF) / 255, blue: Double(hex & 0xFF) / 255, opacity: 1)
-    }
-    static func adaptive(_ light: UInt32, _ dark: UInt32) -> Color {
-        Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(Color(hex: dark)) : UIColor(Color(hex: light)) })
-    }
-}
-
-/// Palette derived from the app icon: moss green and bone, with one warm tone
-/// reserved for values outside a person's usual range.
+/// System surfaces follow iOS appearance and accessibility settings.
 enum Tone {
-    static let canvas = Color.adaptive(0xF1F3EE, 0x0A0E0D)
-    static let surface = Color.adaptive(0xFFFFFF, 0x131917)
-    static let sunken = Color.adaptive(0xE7EBE4, 0x1C2421)
-    static let ink = Color.adaptive(0x101916, 0xEEF3E6)
-    static let ink2 = Color.adaptive(0x58635E, 0x97A39D)
-    static let ink3 = Color.adaptive(0x9AA49F, 0x5B6661)
-    static let hairline = Color.adaptive(0xDCE2D9, 0x24302B)
-    static let moss = Color.adaptive(0x0B5247, 0x7FD4B8)
-    static let mossSoft = Color.adaptive(0xD9EAE2, 0x143A30)
-    static let onMoss = Color.adaptive(0xF0F5E6, 0x06201B)
-    static let signal = Color.adaptive(0xB9512B, 0xFF9468)
-    static let heart = Color.adaptive(0xC03A4F, 0xFF7586)
+    static let canvas = Color(uiColor: .systemGroupedBackground)
+    static let surface = Color(uiColor: .secondarySystemGroupedBackground)
+    static let sunken = Color(uiColor: .tertiarySystemFill)
+    static let ink = Color.primary
+    static let ink2 = Color.secondary
+    static let ink3 = Color(uiColor: .tertiaryLabel)
+    static let hairline = Color(uiColor: .separator)
+    static let moss = Color.accentColor
+    static let mossSoft = Color.accentColor.opacity(0.12)
+    static let onMoss = Color.white
+    static let signal = Color(uiColor: .systemOrange)
+    static let heart = Color(uiColor: .systemRed)
 }
 
 extension Font {
@@ -39,7 +29,7 @@ struct Eyebrow: View {
     var color: Color = Tone.ink2
     init(_ text: String, color: Color = Tone.ink2) { self.text = text; self.color = color }
     var body: some View {
-        Text(text.uppercased()).font(.eyebrow).tracking(0.9).foregroundStyle(color)
+        Text(L(text).uppercased()).font(.eyebrow).tracking(0.9).foregroundStyle(color)
             .accessibilityAddTraits(.isHeader)
     }
 }
@@ -72,17 +62,23 @@ struct PillButton: View {
     var busy = false
     let action: () -> Void
     var body: some View {
+        if #available(iOS 26.0, *) {
+            if prominent { button.buttonStyle(.glassProminent).controlSize(.large) }
+            else { button.buttonStyle(.glass).controlSize(.large) }
+        } else {
+            if prominent { button.buttonStyle(.borderedProminent).controlSize(.large) }
+            else { button.buttonStyle(.bordered).controlSize(.large) }
+        }
+    }
+    private var button: some View {
         Button(action: action) {
             HStack(spacing: 7) {
                 if busy { ProgressView().controlSize(.small).tint(prominent ? Tone.onMoss : Tone.ink) }
                 else if let symbol { Image(systemName: symbol).font(.subheadline.weight(.semibold)) }
-                Text(title).font(.subheadline.weight(.semibold))
+                Text(L(title)).font(.subheadline.weight(.semibold))
             }
-            .padding(.horizontal, 16).frame(height: 40)
-            .foregroundStyle(prominent ? Tone.onMoss : Tone.ink)
-            .background(prominent ? Tone.moss : Tone.sunken, in: Capsule())
-            .contentShape(Capsule())
-        }.buttonStyle(PressStyle())
+        }
+        .buttonBorderShape(.capsule)
     }
 }
 
@@ -131,7 +127,7 @@ struct MilestoneTrack: View {
         }
         .frame(height: 10)
         .animation(.spring(duration: 0.5, bounce: 0.1), value: progress)
-        .accessibilityElement().accessibilityLabel("Goal progress").accessibilityValue("\(Int(min(1, progress) * 100)) percent")
+        .accessibilityElement().accessibilityLabel(L("Goal progress")).accessibilityValue(L("%@ percent", String(describing: Int(min(1, progress) * 100))))
     }
 }
 
@@ -172,20 +168,19 @@ struct PatternGlyph: View {
             }
         }
         .frame(width: 54, height: 10)
-        .accessibilityLabel(pattern.title)
+        .accessibilityLabel(L(pattern.title))
     }
 }
 
 extension View {
     func screenBackground() -> some View { background(Tone.canvas.ignoresSafeArea()) }
-    func surfaceRows() -> some View { scrollContentBackground(.hidden).background(Tone.canvas.ignoresSafeArea()) }
 }
 
 enum Format {
     static func relative(_ date: Date, now: Date = Date()) -> String {
         let seconds = now.timeIntervalSince(date)
-        if seconds < 60 { return "just now" }
-        if seconds < 3600 { return "\(Int(seconds / 60)) min ago" }
+        if seconds < 60 { return L("just now") }
+        if seconds < 3600 { return L("%@ min ago", String(describing: Int(seconds / 60))) }
         if Calendar.current.isDateInToday(date) { return date.formatted(date: .omitted, time: .shortened) }
         return date.formatted(.dateTime.day().month(.abbreviated).hour().minute())
     }

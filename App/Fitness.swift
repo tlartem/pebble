@@ -380,15 +380,15 @@ enum FitnessMath {
             return Int((50 + directed * 30).rounded().clamped(to: 0...100))
         }
         var parts: [(String, Int, Double, String)] = []  // name, score, weight, detail
-        if let hrv = input.hrv { parts.append(("HRV", sub(hrv, higherBetter: true), 40, "\(Int(hrv.recent)) vs \(Int(hrv.low))–\(Int(hrv.high)) ms")) }
-        if let rhr = input.rhr { parts.append(("Resting HR", sub(rhr, higherBetter: false), 25, "\(Int(rhr.recent)) vs \(Int(rhr.low))–\(Int(rhr.high)) bpm")) }
+        if let hrv = input.hrv { parts.append(("HRV", sub(hrv, higherBetter: true), 40, L("%@ vs %@–%@ ms", String(describing: Int(hrv.recent)), String(describing: Int(hrv.low)), String(describing: Int(hrv.high))))) }
+        if let rhr = input.rhr { parts.append(("Resting HR", sub(rhr, higherBetter: false), 25, L("%@ vs %@–%@ bpm", String(describing: Int(rhr.recent)), String(describing: Int(rhr.low)), String(describing: Int(rhr.high))))) }
         if let hours = input.sleepHours {
             let score = Int((hours / input.sleepNeed * 85).rounded().clamped(to: 0...100))
-            parts.append(("Sleep", score, 25, String(format: "%.1f h of ~%.0f h", hours, input.sleepNeed)))
+            parts.append(("Sleep", score, 25, String(format: L("%.1f h of ~%.0f h"), hours, input.sleepNeed)))
         }
         if let reg = input.regularityMinutes {
             let score = Int((100 - reg).clamped(to: 0...100))   // 0 min SD = 100, 100 min = 0
-            parts.append(("Regularity", score, 10, "±\(Int(reg)) min midpoint"))
+            parts.append(("Regularity", score, 10, L("±%@ min midpoint", String(describing: Int(reg)))))
         }
         guard parts.count >= 2, parts.contains(where: { $0.0 == "HRV" || $0.0 == "Resting HR" }) else { return nil }
         let totalWeight = parts.map(\.2).reduce(0, +)

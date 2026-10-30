@@ -1,0 +1,5 @@
+"Buzz my band with ${applicationName}" = "Включи вибрацию браслета в ${applicationName}";
+"${applicationName} buzz" = "${applicationName} вибрация";
+"How many steps in ${applicationName}" = "Сколько шагов в ${applicationName}";
+"${applicationName} steps" = "${applicationName} шаги";
+"${applicationName} battery" = "${applicationName} заряд";

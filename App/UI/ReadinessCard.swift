@@ -25,32 +25,32 @@ struct ReadinessCard: View {
         if let readiness = library.readiness() {
             Card {
                 HStack(alignment: .firstTextBaseline) {
-                    Eyebrow("Readiness")
+                    Eyebrow(L("Readiness"))
                     Spacer()
                     Button { methods = true } label: { Image(systemName: "info.circle").foregroundStyle(Tone.ink3) }
-                        .accessibilityLabel("How readiness is calculated")
+                        .accessibilityLabel(L("How readiness is calculated"))
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text("\(readiness.score)").font(.figure(64)).monospacedDigit().foregroundStyle(color(readiness.band))
                         .contentTransition(.numericText(value: Double(readiness.score)))
-                    Text(readiness.band).font(.title3.weight(.semibold)).foregroundStyle(color(readiness.band))
+                    Text(L(readiness.band)).font(.title3.weight(.semibold)).foregroundStyle(color(readiness.band))
                     Spacer()
                 }.padding(.top, 4)
                 VStack(spacing: 10) {
                     ForEach(readiness.components, id: \.name) { part in
                         HStack(spacing: 10) {
-                            Text(part.name).font(.subheadline).frame(width: 92, alignment: .leading)
+                            Text(L(part.name)).font(.subheadline).frame(width: 92, alignment: .leading)
                             GeometryReader { geo in
                                 ZStack(alignment: .leading) {
                                     Capsule().fill(Tone.sunken)
                                     Capsule().fill(color(bandFor(part.score))).frame(width: max(6, geo.size.width * CGFloat(part.score) / 100))
                                 }
                             }.frame(height: 6)
-                            Text(part.detail).font(.caption).foregroundStyle(Tone.ink2).frame(width: 118, alignment: .trailing)
+                            Text(L(part.detail)).font(.caption).foregroundStyle(Tone.ink2).frame(width: 118, alignment: .trailing)
                         }
                     }
                 }.padding(.top, 14)
-                Text("A transparent heuristic from your own HRV, resting heart rate and sleep. Not a medical measure.").font(.caption).foregroundStyle(Tone.ink3).padding(.top, 12)
+                Text(L("A transparent heuristic from your own HRV, resting heart rate and sleep. Not a medical measure.")).font(.caption).foregroundStyle(Tone.ink3).padding(.top, 12)
             }
             .animation(.snappy, value: readiness.score)
         }

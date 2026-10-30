@@ -6,8 +6,10 @@
 <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
 <key>CFBundleName</key><string>Pebble</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>1.1.0</string>
-<key>CFBundleVersion</key><string>5</string>
+<key>CFBundleDevelopmentRegion</key><string>en</string>
+<key>CFBundleLocalizations</key><array><string>en</string><string>ru</string></array>
+<key>CFBundleShortVersionString</key><string>1.2.0</string>
+<key>CFBundleVersion</key><string>6</string>
 <key>LSRequiresIPhoneOS</key><true/>
 <key>NSBluetoothAlwaysUsageDescription</key><string>Pebble connects to your Fitbit Air to manage alarms, read activity and deliver vibration alerts.</string>
 <key>NSHealthShareUsageDescription</key><string>Pebble reads steps, sleep, resting heart rate, HRV, workouts and your age to show trends against your own usual range.</string>

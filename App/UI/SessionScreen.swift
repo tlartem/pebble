@@ -21,7 +21,7 @@ struct SessionScreen: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .screenBackground()
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(L("Close")) { dismiss() } } }
             .sheet(item: $finishing) { entry in
                 LogWorkoutSheet(existing: entry, isNew: true) { saved in
                     if saved { library.change { $0.session = nil }; live.stop(); dismiss() }
@@ -35,11 +35,11 @@ struct SessionScreen: View {
         VStack(spacing: 22) {
             Spacer()
             PebbleMark(size: 96, cutout: Tone.canvas)
-            Text("What are you doing?").font(.title3.weight(.semibold))
+            Text(L("What are you doing?")).font(.title3.weight(.semibold))
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 10)], spacing: 10) {
                 ForEach(activities, id: \.self) { activity in
                     Button { begin(activity) } label: {
-                        Text(activity).font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).frame(height: 48)
+                        Text(L(activity)).font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).frame(height: 48)
                             .background(Tone.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                             .foregroundStyle(Tone.ink)
                     }.buttonStyle(PressStyle())
@@ -53,7 +53,7 @@ struct SessionScreen: View {
     private func running(_ session: WorkoutSession) -> some View {
         let floors = zoneFloors
         return VStack(spacing: 0) {
-            Eyebrow(session.activity ?? "Session").padding(.top, 24)
+            Eyebrow(L(session.activity ?? L("Session"))).padding(.top, 24)
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 Text(Duration.seconds(session.elapsed(at: context.date)).formatted(.time(pattern: .hourMinuteSecond)))
                     .font(.figure(84, .medium)).monospacedDigit().foregroundStyle(session.paused ? Tone.ink3 : Tone.ink)
@@ -63,39 +63,39 @@ struct SessionScreen: View {
                 HStack(alignment: .firstTextBaseline) {
                     Image(systemName: "heart.fill").foregroundStyle(Tone.heart)
                     Text(live.bpm.map(String.init) ?? "—").font(.figure(44)).monospacedDigit()
-                    Text("bpm").font(.footnote).foregroundStyle(Tone.ink2)
+                    Text(L("bpm")).font(.footnote).foregroundStyle(Tone.ink2)
                     Spacer()
                     if let bpm = live.bpm, let floors, let zone = FitnessMath.zone(for: Double(bpm), floors: floors) {
-                        Text("Zone \(zone + 1)").font(.subheadline.weight(.semibold)).foregroundStyle(Tone.moss)
+                        Text(L("Zone %@", String(describing: zone + 1))).font(.subheadline.weight(.semibold)).foregroundStyle(Tone.moss)
                     }
                 }
                 switch live.state {
                 case .off:
-                    Button("Show live heart rate") { live.start() }.font(.subheadline.weight(.semibold)).padding(.top, 8)
-                    Text("Turn on Share heart rate for your Air in Google Health first.").font(.caption).foregroundStyle(Tone.ink3).padding(.top, 2)
-                case .searching: Text("Looking for your band…").font(.caption).foregroundStyle(Tone.ink2).padding(.top, 8)
+                    Button(L("Show live heart rate")) { live.start() }.font(.subheadline.weight(.semibold)).padding(.top, 8)
+                    Text(L("Turn on Share heart rate for your Air in Google Health first.")).font(.caption).foregroundStyle(Tone.ink3).padding(.top, 2)
+                case .searching: Text(L("Looking for your band…")).font(.caption).foregroundStyle(Tone.ink2).padding(.top, 8)
                 case .streaming:
                     ZoneBars(seconds: zoneSeconds).padding(.top, 12)
                     if let rmssd = FitnessMath.rmssd(Array(live.rr.suffix(120))) {
-                        Text("RMSSD \(Int(rmssd)) ms · last \(min(live.rr.count, 120)) beats").font(.caption).foregroundStyle(Tone.ink3).padding(.top, 8)
+                        Text(L("RMSSD %@ ms · last %@ beats", String(describing: Int(rmssd)), String(describing: min(live.rr.count, 120)))).font(.caption).foregroundStyle(Tone.ink3).padding(.top, 8)
                     }
                 case .unavailable(let reason):
-                    Text(reason).font(.caption).foregroundStyle(Tone.signal).padding(.top, 8)
-                    Button("Try again") { live.start() }.font(.subheadline.weight(.semibold)).padding(.top, 4)
+                    Text(L(reason)).font(.caption).foregroundStyle(Tone.signal).padding(.top, 8)
+                    Button(L("Try again")) { live.start() }.font(.subheadline.weight(.semibold)).padding(.top, 4)
                 }
             }
             .padding(.horizontal, 16).padding(.top, 24)
             Spacer()
             HStack(spacing: 12) {
-                PillButton(title: session.paused ? "Resume" : "Pause", symbol: session.paused ? "play.fill" : "pause.fill") {
+                PillButton(title: session.paused ? L("Resume") : L("Pause"), symbol: session.paused ? "play.fill" : "pause.fill") {
                     library.change { data in
                         if data.session?.paused == true { data.session?.resume(at: Date()) } else { data.session?.pause(at: Date()) }
                     }
                 }
-                PillButton(title: "Finish", symbol: "checkmark", prominent: true) { finish(session) }
+                PillButton(title: L("Finish"), symbol: "checkmark", prominent: true) { finish(session) }
             }
             .padding(.bottom, 28)
-            Button("Discard session", role: .destructive) { library.change { $0.session = nil }; live.stop(); dismiss() }
+            Button(L("Discard session"), role: .destructive) { library.change { $0.session = nil }; live.stop(); dismiss() }
                 .font(.footnote).padding(.bottom, 12)
         }
     }
@@ -143,7 +143,7 @@ private struct ZoneBars: View {
             }
         }
         .frame(height: 62)
-        .accessibilityLabel("Time in heart rate zones")
+        .accessibilityLabel(L("Time in heart rate zones"))
     }
 }
 
@@ -160,7 +160,7 @@ struct LogWorkoutSheet: View {
         _entry = State(initialValue: base); _rated = State(initialValue: base.effort != nil)
         self.isNew = isNew || existing == nil; self.onClose = onClose
     }
-    private static let labels = [0: "Rest", 1: "Very easy", 2: "Easy", 3: "Moderate", 4: "Somewhat hard", 5: "Hard", 6: "Hard", 7: "Very hard", 8: "Very hard", 9: "Very hard", 10: "Maximal"]
+    private static let labels = [0: L("Rest"), 1: L("Very easy"), 2: L("Easy"), 3: L("Moderate"), 4: L("Somewhat hard"), 5: L("Hard"), 6: L("Hard"), 7: L("Very hard"), 8: L("Very hard"), 9: L("Very hard"), 10: L("Maximal")]
     var body: some View {
         NavigationStack {
             Form {
@@ -168,28 +168,27 @@ struct LogWorkoutSheet: View {
                     VStack(spacing: 6) {
                         Text(rated ? "\(entry.effort ?? 0)" : "–").font(.figure(64)).monospacedDigit()
                             .contentTransition(.numericText(value: Double(entry.effort ?? 0)))
-                        Text(rated ? Self.labels[entry.effort ?? 0] ?? "" : "How hard was the whole session?").font(.subheadline).foregroundStyle(Tone.ink2)
+                        Text(L(rated ? Self.labels[entry.effort ?? 0] ?? "" : L("How hard was the whole session?"))).font(.subheadline).foregroundStyle(Tone.ink2)
                         Slider(value: Binding(get: { Double(entry.effort ?? 5) }, set: { entry.effort = Int($0.rounded()); rated = true }), in: 0...10, step: 1)
                             .padding(.top, 8)
                     }
                     .frame(maxWidth: .infinity).padding(.vertical, 8)
                     .animation(.snappy, value: entry.effort)
-                } footer: { Text("Rate the session as a whole, ideally around 30 minutes after. Load = effort × minutes (Foster et al., 2001).") }
+                } footer: { Text(L("Rate the session as a whole, ideally around 30 minutes after. Load = effort × minutes (Foster et al., 2001).")) }
                 Section {
-                    Picker("Activity", selection: $entry.activity) { ForEach(Array(Set(activities + [entry.activity])).sorted(), id: \.self) { Text($0).tag($0) } }
-                    DatePicker("Started", selection: $entry.date)
-                    Stepper("\(Int(entry.minutes)) min", value: $entry.minutes, in: 1...600, step: 5)
-                    if let pulse = entry.averageHeartRate { LabeledContent("Average heart rate", value: "\(pulse) bpm") }
-                    if let zones = entry.zoneMinutes { LabeledContent("Zone load (Edwards)", value: "\(Int(FitnessMath.edwardsLoad(zones)))") }
-                    TextField("Note", text: $entry.note, axis: .vertical)
+                    Picker(L("Activity"), selection: $entry.activity) { ForEach(Array(Set(activities + [entry.activity])).sorted(), id: \.self) { Text(L($0)).tag($0) } }
+                    DatePicker(L("Started"), selection: $entry.date)
+                    Stepper(L("%@ min", String(describing: Int(entry.minutes))), value: $entry.minutes, in: 1...600, step: 5)
+                    if let pulse = entry.averageHeartRate { LabeledContent(L("Average heart rate"), value: L("%@ bpm", String(describing: pulse))) }
+                    if let zones = entry.zoneMinutes { LabeledContent(L("Zone load (Edwards)"), value: "\(Int(FitnessMath.edwardsLoad(zones)))") }
+                    TextField(L("Note"), text: $entry.note, axis: .vertical)
                 }
             }
-            .surfaceRows()
-            .navigationTitle(isNew ? "Log session" : entry.activity).navigationBarTitleDisplayMode(.inline)
+            .navigationTitle(L(isNew ? L("Log session") : entry.activity)).navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { onClose?(false); dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(L("Cancel")) { onClose?(false); dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(L("Save")) {
                         if !rated { entry.effort = nil }
                         let saved = entry.valid && library.change { data in
                             data.workouts.removeAll { $0.id == entry.id }; data.workouts.append(entry)

@@ -107,10 +107,10 @@ final class AlertCenter: NSObject, ObservableObject, CXCallObserverDelegate, UNU
     /// Shortcuts and the in-app test call this. Not journaled; each run is explicit.
     func buzz(_ pattern: BuzzPattern) async -> Bool {
         await withCheckedContinuation { continuation in
-            enqueue(label: "Buzz") { [weak self] in
+            enqueue(label: L("Buzz")) { [weak self] in
                 guard let self, let band = self.band, !(self.library?.preview ?? true) else { continuation.resume(returning: false); return }
                 let ok = await self.vibrate(band, pattern)
-                self.lastMessage = ok ? "\(pattern.title) buzz delivered" : "Band unavailable · try again in a moment"
+                self.lastMessage = ok ? L("%@ buzz delivered", String(describing: pattern.title)) : L("Band unavailable · try again in a moment")
                 continuation.resume(returning: ok)
             }
         }
@@ -134,7 +134,7 @@ final class AlertCenter: NSObject, ObservableObject, CXCallObserverDelegate, UNU
                 outcome.append(ok ? "band" : "band unavailable")
             }
             let summary = "\(item.event.title) · " + (outcome.isEmpty ? "recorded" : outcome.joined(separator: ", "))
-            self.lastMessage = summary
+            self.lastMessage = L(item.event.title) + " · " + (outcome.isEmpty ? L("recorded") : outcome.map { L($0) }.joined(separator: ", "))
             library.change { data in
                 for index in data.alertReceipts.indices where item.settles.contains(data.alertReceipts[index].key) { data.alertReceipts[index].outcome = summary }
             }
@@ -147,7 +147,7 @@ final class AlertCenter: NSObject, ObservableObject, CXCallObserverDelegate, UNU
             await previous?.value
             // Keep the process alive through connection, pattern and restore.
             var task = UIBackgroundTaskIdentifier.invalid
-            task = UIApplication.shared.beginBackgroundTask(withName: "Pebble alert: \(label)") { UIApplication.shared.endBackgroundTask(task); task = .invalid }
+            task = UIApplication.shared.beginBackgroundTask(withName: L("Pebble alert: %@", String(describing: label))) { UIApplication.shared.endBackgroundTask(task); task = .invalid }
             self.delivering = true
             await work()
             self.delivering = false
@@ -165,9 +165,9 @@ final class AlertCenter: NSObject, ObservableObject, CXCallObserverDelegate, UNU
         guard await center.notificationSettings().authorizationStatus == .authorized else { return }
         let content = UNMutableNotificationContent()
         switch event {
-        case .goal: content.title = "Goal reached"; content.body = "\(goal.formatted()) steps today."
-        case .milestone: content.title = "\((steps ?? 0).formatted()) steps"; content.body = "Another milestone today."
-        case .move: content.title = "Time to move"; content.body = "A short walk breaks up a long sitting stretch."
+        case .goal: content.title = L("Goal reached"); content.body = L("%@ steps today.", String(describing: goal.formatted()))
+        case .milestone: content.title = L("%@ steps", String(describing: (steps ?? 0).formatted())); content.body = L("Another milestone today.")
+        case .move: content.title = L("Time to move"); content.body = L("A short walk breaks up a long sitting stretch.")
         case .call, .shortcut: return
         }
         content.sound = .default

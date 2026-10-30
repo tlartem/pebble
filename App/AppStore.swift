@@ -63,7 +63,7 @@ final class AppStore: ObservableObject {
                 guard saved.schema == 1 else { throw CocoaError(.coderReadCorrupt) }
                 data = saved
             }
-        } catch { self.error = "Your saved library could not be opened. It has not been overwritten."; loadFailed = true }
+        } catch { self.error = L("Your saved library could not be opened. It has not been overwritten."); loadFailed = true }
     }
     /// Saved with "until first unlock" protection so background alerts can
     /// record receipts while the iPhone is locked.
@@ -73,7 +73,7 @@ final class AppStore: ObservableObject {
         do {
             if !preview { try JSONEncoder().encode(next).write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]) }
             data = next; return true
-        } catch { self.error = "Couldn’t save your changes. Check available iPhone storage."; return false }
+        } catch { self.error = L("Couldn’t save your changes. Check available iPhone storage."); return false }
     }
     func setPreview(_ enabled: Bool) {
         guard preview != enabled else { return }

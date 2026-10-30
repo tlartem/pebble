@@ -17,7 +17,7 @@ final class HealthImport: ObservableObject {
 
     func refresh(into library: AppStore) {
         guard !busy, !library.preview else { return }
-        guard HKHealthStore.isHealthDataAvailable() else { message = "Apple Health isn’t available on this device."; return }
+        guard HKHealthStore.isHealthDataAvailable() else { message = L("Apple Health isn’t available on this device."); return }
         busy = true; message = nil
         Task { @MainActor in
             defer { busy = false }
@@ -38,7 +38,7 @@ final class HealthImport: ObservableObject {
                     return Calendar.current.dateComponents([.year], from: date, to: Date()).year
                 }
                 guard !metrics.isEmpty || !workouts.isEmpty || age != nil else {
-                    message = "Nothing readable yet. Check Pebble’s access in the Health app."
+                    message = L("Nothing readable yet. Check Pebble’s access in the Health app.")
                     return
                 }
                 let importedKinds = Set(metrics.map(\.kind))
@@ -57,8 +57,8 @@ final class HealthImport: ObservableObject {
                     if data.profile.age == nil, let age, (10...110).contains(age) { data.profile.age = age }
                     data.healthReadAt = Date()
                 }
-                if saved { message = "Updated from Apple Health." }
-            } catch { message = "Apple Health import didn’t finish. Your history is unchanged." }
+                if saved { message = L("Updated from Apple Health.") }
+            } catch { message = L("Apple Health import didn’t finish. Your history is unchanged.") }
         }
     }
 

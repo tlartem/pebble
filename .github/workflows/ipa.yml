@@ -2,6 +2,9 @@ name: Build unsigned IPA
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['App/**', 'Native/**', '.github/workflows/ipa.yml']
 
 permissions:
   contents: read
@@ -9,9 +12,15 @@ permissions:
 jobs:
   build:
     runs-on: macos-15
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: Verify iOS 26 SDK
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
       - name: Prepare native dependencies
         run: ./scripts/prepare-native.sh
       - name: Build for iPhone without signing

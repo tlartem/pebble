@@ -1,0 +1,2 @@
+"NSBluetoothAlwaysUsageDescription" = "Pebble connects to your Fitbit Air to manage alarms, read activity and deliver vibration alerts.";
+"NSHealthShareUsageDescription" = "Pebble reads steps, sleep, resting heart rate, HRV, workouts and your age to show trends against your own usual range.";

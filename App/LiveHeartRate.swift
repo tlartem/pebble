@@ -21,7 +21,7 @@ final class LiveHeartRate: NSObject, ObservableObject, CBCentralManagerDelegate,
         guard state == .off || { if case .unavailable = state { return true }; return false }() else { return }
         state = .searching; bpm = nil; rr = []
         if central == nil { central = CBCentralManager(delegate: self, queue: .main) } else { centralManagerDidUpdateState(central!) }
-        arm(20, "No live heart rate. Turn on Share heart rate for your Air in Google Health, then try again.")
+        arm(20, L("No live heart rate. Turn on Share heart rate for your Air in Google Health, then try again."))
     }
 
     func stop() {
@@ -44,7 +44,7 @@ final class LiveHeartRate: NSObject, ObservableObject, CBCentralManagerDelegate,
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         guard state == .searching else { return }
         guard central.state == .poweredOn else {
-            if central.state == .unauthorized || central.state == .poweredOff { stop(); state = .unavailable("Bluetooth is unavailable.") }
+            if central.state == .unauthorized || central.state == .poweredOff { stop(); state = .unavailable(L("Bluetooth is unavailable.")) }
             return
         }
         let connected = central.retrieveConnectedPeripherals(withServices: [service])
@@ -67,7 +67,7 @@ final class LiveHeartRate: NSObject, ObservableObject, CBCentralManagerDelegate,
     }
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         guard peripheral === self.peripheral, state != .off else { return }
-        self.peripheral = nil; state = .unavailable("Live heart rate stopped. Sharing may have ended.")
+        self.peripheral = nil; state = .unavailable(L("Live heart rate stopped. Sharing may have ended."))
     }
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         guard let hrs = peripheral.services?.first(where: { $0.uuid == service }) else { return }
@@ -82,7 +82,7 @@ final class LiveHeartRate: NSObject, ObservableObject, CBCentralManagerDelegate,
         if sample.bpm > 0 { bpm = sample.bpm; updatedAt = Date() }
         rr = Array((rr + sample.rr).suffix(300))
         state = .streaming
-        arm(15, "Live heart rate paused. Check that sharing is still on.")
+        arm(15, L("Live heart rate paused. Check that sharing is still on."))
     }
 
     /// Heart Rate Measurement (0x2A37): flags, 8/16-bit value, optional energy

@@ -38,7 +38,6 @@ struct PebbleApp: App {
                 .environmentObject(services.alerts)
                 .environmentObject(services.keepAlive)
                 .environmentObject(services.liveHeart)
-                .tint(Tone.moss)
                 .onAppear(perform: launchArguments)
                 .onChange(of: scene) { _, state in
                     let band = services.band
@@ -97,10 +96,10 @@ struct RootView: View {
     @Binding var tab: Int
     var body: some View {
         TabView(selection: $tab) {
-            TodayScreen().tabItem { Label("Today", systemImage: "circle.dotted.circle") }.tag(0)
-            AlarmsScreen().tabItem { Label("Alarms", systemImage: "alarm") }.tag(1)
-            TrendsScreen().tabItem { Label("Trends", systemImage: "chart.line.uptrend.xyaxis") }.tag(2)
-            BandScreen().tabItem { Label("Band", image: "PebbleTab") }.tag(3)
+            TodayScreen().tabItem { Label(L("Today"), systemImage: "circle.dotted.circle") }.tag(0)
+            AlarmsScreen().tabItem { Label(L("Alarms"), systemImage: "alarm") }.tag(1)
+            TrendsScreen().tabItem { Label(L("Trends"), systemImage: "chart.line.uptrend.xyaxis") }.tag(2)
+            BandScreen().tabItem { Label(L("Band"), image: "PebbleTab") }.tag(3)
         }
     }
 }
