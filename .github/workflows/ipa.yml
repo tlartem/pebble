@@ -9,9 +9,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ipa-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
     timeout-minutes: 20
