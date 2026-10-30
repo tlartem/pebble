@@ -14,6 +14,8 @@ fi
 .private/native-tests/air-transport-test
 swiftc App/Alarms.swift App/BandMetrics.swift tests/AlarmParserTests.swift -o .private/alarm-parser-tests
 .private/alarm-parser-tests
+swiftc App/DeviceKeys.swift tests/DeviceKeysTests.swift -o .private/device-keys-tests
+.private/device-keys-tests
 swiftc App/Fitness.swift App/Alerts.swift tests/FitnessTests.swift -o .private/fitness-tests
 .private/fitness-tests
 swiftc App/Fitness.swift App/Alerts.swift App/AppStore.swift tests/StoreTests.swift -o .private/store-tests
