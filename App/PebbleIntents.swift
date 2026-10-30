@@ -20,7 +20,8 @@ struct BuzzBandIntent: AppIntent {
 
     @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {
         let ok = await Services.shared.alerts.buzz(pattern.pattern)
-        return .result(dialog: ok ? "Buzzed your band." : "Your band is busy or out of range.")
+        let dialog: IntentDialog = ok ? "Buzzed your band." : "Your band is busy or out of range."
+        return .result(dialog: dialog)
     }
 }
 
