@@ -63,6 +63,7 @@ final class BandConnection: NSObject, ObservableObject, CBCentralManagerDelegate
     private var hasStarted = false
     private var sent = 0
     private var received = 0
+    private var lastDTLSState: Int32?
     private var events: [[String: String]] = []
     private var captureEnabled = false
     private var fragments: [[String: String]] = []
@@ -226,9 +227,11 @@ final class BandConnection: NSObject, ObservableObject, CBCentralManagerDelegate
         completedPulseGroups = 0; pulseSucceeded = false; pulseReady = false
         purpose = requested; phase = .alarms; beforeWrite = nil; writeSent = false; writeVerified = false; correctedCreation = false
         active = true; didRead = false; hasStarted = false; sent = 0; received = 0; events = []; fragments = []; outgoing = []; observedEventCount = 0; systemSharingReady = false
+        lastDTLSState = nil
         if case .observe = requested { observedEvents = [] }
         status = "Finding your Air"; detail = "Keep your band close to your iPhone."
         record("begin", value: UIApplication.shared.applicationState == .background ? "background" : "foreground")
+        if let fingerprint = try? DeviceKeys.load().fingerprint() { record("key_fingerprint", value: fingerprint) }
         let observing: Bool = { if case .observe = requested { return true }; return false }()
         let sharing: Bool = { if case .systemSharing = requested { return true }; return false }()
         timeout = Timer(timeInterval: observing ? 120 : 35, repeats: false) { [weak self] _ in
@@ -410,6 +413,7 @@ final class BandConnection: NSObject, ObservableObject, CBCentralManagerDelegate
         var delay = UInt32.max
         guard air_transport_work(transport, &delay) == 0 else { finish("Band transport stopped", "No settings were changed."); return }
         let state = air_transport_state(transport)
+        if state != lastDTLSState { lastDTLSState = state; record("dtls_state", value: String(state)) }
         if state == 2 && !didRead {
             authenticatedPeripheralID = band?.identifier
             didRead = true; status = "Reading alarms"; record("authenticated")

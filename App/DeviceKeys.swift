@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import CryptoKit
 
 struct DeviceKeys: Codable {
     struct Key: Codable { let key: String; let keyId: UInt32 }
@@ -8,6 +9,11 @@ struct DeviceKeys: Codable {
     func validate() throws {
         guard ordered.count == 2, ordered[0].keyId != ordered[1].keyId,
               ordered.allSatisfy({ Data(base64Encoded: $0.key)?.count == 16 }) else { throw Failure.invalid }
+    }
+    func fingerprint() throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        return SHA256.hash(data: try encoder.encode(self)).prefix(6).map { String(format: "%02x", $0) }.joined()
     }
     enum Failure: Error { case invalid, keychain }
     static let service = "com.medpar.air.companion.device-keys"
