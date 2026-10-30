@@ -64,6 +64,7 @@ final class BandConnection: NSObject, ObservableObject, CBCentralManagerDelegate
     private var sent = 0
     private var received = 0
     private var lastDTLSState: Int32?
+    private var confirmationWrite: CBCharacteristic?
     private var events: [[String: String]] = []
     private var captureEnabled = false
     private var fragments: [[String: String]] = []
@@ -102,6 +103,8 @@ final class BandConnection: NSObject, ObservableObject, CBCentralManagerDelegate
     private let rxID = CBUUID(string: "ABBAFF02-E56A-484C-B832-8B17CF6CBFE8")
     private let linkStatusService = CBUUID(string: "ABBAFD00-E56A-484C-B832-8B17CF6CBFE8")
     private let linkStatusID = CBUUID(string: "ABBAFD02-E56A-484C-B832-8B17CF6CBFE8")
+    private let confirmationServiceID = CBUUID(string: "AC2F0045-8182-4BE5-91E0-2992E6B40EBB")
+    private let confirmationPointerID = CBUUID(string: "AC2F0145-8182-4BE5-91E0-2992E6B40EBB")
     override init() {
         super.init(); refreshKeys()
         if let data = try? Data(contentsOf: document("band-snapshot.json")),
@@ -230,6 +233,7 @@ final class BandConnection: NSObject, ObservableObject, CBCentralManagerDelegate
         purpose = requested; phase = .alarms; beforeWrite = nil; writeSent = false; writeVerified = false; correctedCreation = false
         active = true; didRead = false; hasStarted = false; sent = 0; received = 0; events = []; fragments = []; outgoing = []; observedEventCount = 0; systemSharingReady = false
         lastDTLSState = nil
+        confirmationWrite = nil
         if case .observe = requested { observedEvents = [] }
         status = "Finding your Air"; detail = "Keep your band close to your iPhone."
         record("begin", value: UIApplication.shared.applicationState == .background ? "background" : "foreground")
@@ -298,7 +302,7 @@ final class BandConnection: NSObject, ObservableObject, CBCentralManagerDelegate
             record("ancs_probe_no_application_writes")
             return
         }
-        peripheral.discoverServices([service, legacy, linkStatusService])
+        peripheral.discoverServices([service, legacy, linkStatusService, confirmationServiceID])
     }
     func centralManager(_ central: CBCentralManager, didUpdateANCSAuthorizationFor peripheral: CBPeripheral) {
         guard active, band === peripheral else { return }
@@ -320,12 +324,22 @@ final class BandConnection: NSObject, ObservableObject, CBCentralManagerDelegate
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         guard active, band === peripheral else { return }
         guard error == nil, let services = peripheral.services, !services.isEmpty else { finish("Band service unavailable", "No settings were changed."); return }
+        record("confirmation_service", value: services.contains { $0.uuid == confirmationServiceID } ? "available" : "absent")
         for service in services {
-            peripheral.discoverCharacteristics(service.uuid == linkStatusService ? [linkStatusID] : [txID, rxID], for: service)
+            let ids = service.uuid == confirmationServiceID ? nil : service.uuid == linkStatusService ? [linkStatusID] : [txID, rxID]
+            peripheral.discoverCharacteristics(ids, for: service)
         }
     }
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         guard active, band === peripheral else { return }
+        if service.uuid == confirmationServiceID {
+            guard error == nil, let pointer = service.characteristics?.first(where: { $0.uuid == confirmationPointerID }), pointer.properties.contains(.read) else {
+                record("confirmation_pointer_unavailable"); return
+            }
+            record("confirmation_pointer_read")
+            peripheral.readValue(for: pointer)
+            return
+        }
         if service.uuid == linkStatusService {
             guard error == nil, let status = service.characteristics?.first(where: { $0.uuid == linkStatusID }), status.properties.contains(.read) else {
                 record("ble_link_status_unavailable"); return
@@ -399,6 +413,23 @@ final class BandConnection: NSObject, ObservableObject, CBCentralManagerDelegate
         } catch { finish("Device key unavailable", "Unlock your iPhone and try again.") }
     }
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+        if active, band === peripheral, characteristic.uuid == confirmationPointerID {
+            guard confirmationWrite == nil else { return }
+            guard error == nil, let data = characteristic.value, [2, 4, 16].contains(data.count),
+                  let service = characteristic.service, service.uuid == confirmationServiceID else {
+                record("confirmation_pointer_invalid"); return
+            }
+            let id = CBUUID(data: data)
+            guard id != confirmationPointerID,
+                  let target = service.characteristics?.first(where: { $0.uuid == id && $0.properties.contains(.write) }) else {
+                record("confirmation_target_unavailable"); return
+            }
+            // Golden Gate confirms the discovered GATT database with a single zero byte.
+            confirmationWrite = target
+            record("confirmation_write_requested")
+            peripheral.writeValue(Data([0]), for: target, type: .withResponse)
+            return
+        }
         if active, band === peripheral, characteristic.uuid == linkStatusID {
             guard error == nil, let data = characteristic.value, data.count >= 7, let flags = data.first else {
                 record("ble_link_status_read_failed", value: (error as NSError?).map { "\($0.domain):\($0.code)" } ?? "invalid_length"); return
@@ -418,6 +449,18 @@ final class BandConnection: NSObject, ObservableObject, CBCentralManagerDelegate
         guard active, band === peripheral, let transport else { return }
         flushOutgoing()
         air_transport_writable(transport); work()
+    }
+    func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
+        guard active, band === peripheral, characteristic === confirmationWrite else { return }
+        if let error = error as NSError? {
+            record("confirmation_write_failed", value: "\(error.domain):\(error.code)")
+            finish("Band setup confirmation failed", "Try refreshing again. No settings were changed.")
+        } else { record("confirmation_write_completed") }
+    }
+    func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService]) {
+        guard active, band === peripheral else { return }
+        record("services_changed")
+        finish("Band services changed", "Refresh again to discover the band's updated Bluetooth services.")
     }
     private func flushOutgoing() {
         guard active, let band, let tx else { return }
@@ -679,7 +722,7 @@ final class BandConnection: NSObject, ObservableObject, CBCentralManagerDelegate
         central?.stopScan()
         if let transport { air_transport_destroy(transport); self.transport = nil }
         if let band, band.state != .disconnected { closing = band; central?.cancelPeripheralConnection(band) }
-        band = nil; tx = nil; rx = nil; outgoing = []
+        band = nil; tx = nil; rx = nil; outgoing = []; confirmationWrite = nil
         status = writeSent && !writeVerified ? "Save needs checking" : title
         detail = writeSent && !writeVerified ? "The request may have reached your band. Refresh before retrying; your prior settings are backed up on this iPhone." : subtitle
         if pendingPulse != nil {
