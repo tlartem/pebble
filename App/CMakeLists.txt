@@ -15,7 +15,7 @@ set_source_files_properties(${license_files} PROPERTIES MACOSX_PACKAGE_LOCATION 
 target_sources(Pebble PRIVATE ${license_files})
 foreach(language en ru)
     file(GLOB localized_files "${CMAKE_CURRENT_SOURCE_DIR}/Localization/${language}.lproj/*.strings")
-    set_source_files_properties(${localized_files} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/${language}.lproj")
+    set_source_files_properties(${localized_files} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
     target_sources(Pebble PRIVATE ${localized_files})
 endforeach()
 target_link_libraries(Pebble PRIVATE air-transport "-framework CoreBluetooth" "-framework SwiftUI" "-framework Security" "-framework HealthKit" "-framework UserNotifications" "-framework Charts" "-framework CallKit" "-framework AVFoundation" "-framework AppIntents" "-framework BackgroundTasks")
